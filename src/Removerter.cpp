@@ -90,8 +90,9 @@ Removerter::~Removerter(){}
 void Removerter::parseValidScanInfo( void )
 {
     int num_valid_parsed {0};
-    float movement_counter {0.0}; 
+    float movement_counter {0.0};
 
+    ROS_WARN("seq size:%d", sequence_scan_paths_.size());
     for(int curr_idx=0; curr_idx < int(sequence_scan_paths_.size()); curr_idx++) 
     {
         // check the scan idx within the target idx range 
@@ -118,7 +119,8 @@ void Removerter::parseValidScanInfo( void )
         sequence_valid_scan_names_.emplace_back(sequence_scan_names_.at(curr_idx));
 
         scan_poses_.emplace_back(sequence_scan_poses_.at(curr_idx)); // used for local2global
-        scan_inverse_poses_.emplace_back(sequence_scan_inverse_poses_.at(curr_idx)); // used for global2local
+        scan_inverse_poses_.emplace_back(
+            sequence_scan_inverse_poses_.at(curr_idx)); // used for global2local
 
         // 
         num_valid_parsed++;
@@ -138,14 +140,19 @@ void Removerter::readValidScans( void )
     const int cout_interval {10};
     int cout_counter {0};
 
+    ROS_WARN("size: %d", sequence_valid_scan_paths_.size());
     for(auto& _scan_path : sequence_valid_scan_paths_) 
     {
         // read bin files and save  
         pcl::PointCloud<PointType>::Ptr points (new pcl::PointCloud<PointType>); // pcl::PointCloud Ptr is a shared ptr so this points will be automatically destroyed after this function block (because no others ref it).
         if( isScanFileKITTIFormat_ ) {
+            // ROS_WARN("Reading bin...");
             readBin(_scan_path, points); // For KITTI (.bin)
         } else {
-            pcl::io::loadPCDFile<PointType> (_scan_path, *points); // saved from SC-LIO-SAM's pcd binary (.pcd)
+            // ROS_WARN("Reading pcd...");
+            pcl::io::loadPCDFile<PointType>(
+                _scan_path,
+                *points); // saved from SC-LIO-SAM's pcd binary (.pcd)
         }
 
         // pcdown
