@@ -11,9 +11,10 @@ removert:
 
   # @ sequence info (replace to your paths) 
   #   please follow the KITTI odometry dataset's scan and pose formats (i.e., make them .bin and line-by-line corresponding se3 poses composed of 12 numbers)
-  sequence_scan_dir: "/mnt/d/dataset/dynamic_self/test/machi/machi_FPGT_w_o_distort/result/corner/cloud/"
-  sequence_scan_dir2: "/mnt/d/dataset/dynamic_self/test/machi/machi_FPGT_w_o_distort/result/surf/cloud/"
-  sequence_pose_path: "/mnt/d/dataset/dynamic_self/test/machi/machi_FPGT_w_o_distort/poses/poses.txt"
+  sequence_scan_dir: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/test/corner/cloud/"
+  sequence_scan_dir2: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/test/surf/cloud/"
+  sequence_pose_path: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/test/poses.txt"
+
 
   sequence_vfov: 32 # including upper and lower fovs, 
                     # for example, KITTI's HDL64E is 2 + 24.9 ~ 27 deg. (so 25 + 25 = 50 is recommended because it is enough)

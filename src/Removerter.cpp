@@ -1,4 +1,5 @@
 #include "removert/Removerter.h"
+#include "ros/assert.h"
 
 inline float rad2deg(float radians) { return radians * 180.0 / M_PI; }
 
@@ -136,6 +137,10 @@ void Removerter::readValidScans(void)
     // read bin files and save
     std::string _scan_path1 = sequence_valid_scan_paths_[i];
     std::string _scan_path2 = sequence_valid_scan_paths2_[i];
+
+    // std::cout << sequence_scan_names_[i] << std::endl;
+    // ROS_BREAK();
+
     pcl::PointCloud<PointType>::Ptr points(new pcl::PointCloud<PointType>);   // pcl::PointCloud Ptr is a shared ptr
     pcl::PointCloud<PointType>::Ptr points1(new pcl::PointCloud<PointType>);   // pcl::PointCloud Ptr is a shared ptr
     pcl::PointCloud<PointType>::Ptr points2(new pcl::PointCloud<PointType>);  // pcl::PointCloud Ptr is a shared ptr
@@ -173,6 +178,30 @@ void Removerter::readValidScans(void)
 
     pcl::PointCloud<PointType>::Ptr downsampled_points(new pcl::PointCloud<PointType>);
     downsize_filter.filter(*downsampled_points);
+
+    // get labels
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_tmp(new pcl::PointCloud<pcl::PointXYZI>);
+
+    // 2. Find nearest point to update intensity (index and id)
+    pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
+    kdtree.setInputCloud(points);
+
+    int K = 1;
+
+    std::vector<int> pointIdxNKNSearch(K);
+    std::vector<float> pointNKNSquaredDistance(K);
+
+    // Set dst <- output
+    for (const auto &pt : downsampled_points->points) {
+      if (kdtree.nearestKSearch(pt, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0) {
+        auto updated = pt;
+        updated.intensity = (*points)[pointIdxNKNSearch[0]].intensity;
+        cloud_tmp->points.emplace_back(updated);
+      }
+    }
+    *downsampled_points = *cloud_tmp;
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // save downsampled pointcloud
     scans_.emplace_back(downsampled_points);
@@ -829,6 +858,31 @@ void Removerter::saveMapPointcloudByMergingCleanedScans(void) {
     mergeScansWithinGlobalCoord(scans_static_, scan_poses_, map_global_static_scans_merged_to_verify_full);
     octreeDownsampling(map_global_static_scans_merged_to_verify_full, map_global_static_scans_merged_to_verify);
 
+    // get labels
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_tmp(new pcl::PointCloud<pcl::PointXYZI>);
+
+    // 2. Find nearest point to update intensity (index and id)
+    pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
+    kdtree.setInputCloud(map_global_static_scans_merged_to_verify_full);
+
+    int K = 1;
+
+    std::vector<int> pointIdxNKNSearch(K);
+    std::vector<float> pointNKNSquaredDistance(K);
+
+    // Set dst <- output
+    for (const auto &pt : map_global_static_scans_merged_to_verify->points) {
+      if (kdtree.nearestKSearch(pt, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0) {
+        auto updated = pt;
+        updated.intensity = (*map_global_static_scans_merged_to_verify_full)[pointIdxNKNSearch[0]].intensity;
+        cloud_tmp->points.emplace_back(updated);
+      }
+    }
+    *map_global_static_scans_merged_to_verify = *cloud_tmp;
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    // kumo111
     // global
     std::string local_file_name = map_static_save_dir_ + "/StaticMapScansideMapGlobal.pcd";
     pcl::io::savePCDFileBinary(local_file_name, *map_global_static_scans_merged_to_verify);
@@ -894,7 +948,7 @@ void Removerter::scansideRemovalForEachScan(void) {
 
 void Removerter::scansideRemovalForEachScanAndSaveThem(void) {
   scansideRemovalForEachScan();
-  saveCleanedScans();
+  // saveCleanedScans();
   saveMapPointcloudByMergingCleanedScans();
 }  // scansideRemovalForEachScanAndSaveThem
 
