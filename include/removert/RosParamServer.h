@@ -34,8 +34,10 @@ public:
     bool isScanFileKITTIFormat_;
 
     std::string sequence_scan_dir_;
+    std::string sequence_scan_dir2_;
     std::vector<std::string> sequence_scan_names_;
-    std::vector<std::string> sequence_scan_paths_;
+    std::vector<std::string> sequence_scan_paths_;//corner
+    std::vector<std::string> sequence_scan_paths2_;//surf
     int num_total_scans_of_sequence_;
     float kDownsampleVoxelSize;
 

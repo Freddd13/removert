@@ -32,14 +32,20 @@ RosParamServer::RosParamServer()
     kSE3MatExtrinsicLiDARtoPoseBase = Eigen::Map<const Eigen::Matrix<double, -1, -1, Eigen::RowMajor>>(kVecExtrinsicLiDARtoPoseBase.data(), 4, 4);
     kSE3MatExtrinsicPoseBasetoLiDAR = kSE3MatExtrinsicLiDARtoPoseBase.inverse();
 
-    // parsing bin file paths 
+    // parsing bin file paths
     nh.param<std::string>("removert/sequence_scan_dir", sequence_scan_dir_, "/use/your/directory/having/*.bin");
+    nh.param<std::string>("removert/sequence_scan_dir2", sequence_scan_dir2_, "/use/your/directory/having/*.bin");
     for(auto& _entry : fs::directory_iterator(sequence_scan_dir_)) {
         sequence_scan_names_.emplace_back(_entry.path().filename());
         sequence_scan_paths_.emplace_back(_entry.path());
     }
+
+    for (auto& _entry : fs::directory_iterator(sequence_scan_dir2_)) {
+      sequence_scan_paths2_.emplace_back(_entry.path());
+    }
     std::sort(sequence_scan_names_.begin(), sequence_scan_names_.end());
     std::sort(sequence_scan_paths_.begin(), sequence_scan_paths_.end());
+    std::sort(sequence_scan_paths2_.begin(), sequence_scan_paths2_.end());
 
     num_total_scans_of_sequence_ = sequence_scan_paths_.size();
     ROS_INFO_STREAM("\033[1;32m Total : " << num_total_scans_of_sequence_ << " scans in the directory.\033[0m");
