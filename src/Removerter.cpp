@@ -1,4 +1,5 @@
 #include "removert/Removerter.h"
+#include "pcl/io/pcd_io.h"
 #include "ros/assert.h"
 
 inline float rad2deg(float radians) { return radians * 180.0 / M_PI; }
@@ -398,11 +399,46 @@ void Removerter::makeGlobalMap(void) {
   // rather VoxelGrid
   octreeDownsampling(map_global_orig_, map_global_curr_);
 
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////
+  // kumo 0.2 res
+  pcl::VoxelGrid<PointType> downsize_filter;
+  pcl::PointCloud<PointType>::Ptr original_map(new pcl::PointCloud<pcl::PointXYZI>());
+  downsize_filter.setLeafSize(0.2, 0.2, 0.2);
+  downsize_filter.setInputCloud(map_global_orig_);
+  downsize_filter.filter(*original_map);
+
+  // get labels
+  ///////////////////////////////////ohhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh//////////////////////////////////////////////////////
+  pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_tmp(new pcl::PointCloud<pcl::PointXYZI>);
+
+  // 2. Find nearest point to update intensity (index and id)
+  pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
+  kdtree.setInputCloud(map_global_orig_);
+  ROS_WARN("original_map_size %d", original_map->size());
+  int K = 1;
+  std::vector<int> pointIdxNKNSearch(K);
+  std::vector<float> pointNKNSquaredDistance(K);
+  // Set dst <- output
+  for (const auto &pt : original_map->points) {
+    if (kdtree.nearestKSearch(pt, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0) {
+      auto updated = pt;
+      updated.intensity = (*map_global_orig_)[pointIdxNKNSearch[0]].intensity;
+      cloud_tmp->points.emplace_back(updated);
+    }
+  }
+  *original_map = *cloud_tmp;
+  original_map->height = 1;
+  original_map->width = original_map->size();
+  ROS_WARN("original_map_size %d", original_map->size());
+  ROS_WARN("cloud_tmp %d", cloud_tmp->size());
+  //////////////////////////////////////////////////////////////////////////////////////////////////////
+
   // save the original cloud
   if (kFlagSaveMapPointcloud) {
     // in global coord
     std::string static_global_file_name = save_pcd_directory_ + "OriginalNoisyMapGlobal.pcd";
-    pcl::io::savePCDFileBinary(static_global_file_name, *map_global_curr_);
+    pcl::io::savePCDFileASCII(static_global_file_name, *original_map);
     ROS_INFO_STREAM("\033[1;32m The original pointcloud is saved (global coord): " << static_global_file_name
                                                                                    << "\033[0m");
 
@@ -410,9 +446,9 @@ void Removerter::makeGlobalMap(void) {
     // identity pose)
     int base_node_idx = base_node_idx_;
     pcl::PointCloud<PointType>::Ptr map_local_curr(new pcl::PointCloud<PointType>);
-    transformGlobalMapToLocal(map_global_curr_, base_node_idx, map_local_curr);
+    transformGlobalMapToLocal(original_map, base_node_idx, map_local_curr);
     std::string static_local_file_name = save_pcd_directory_ + "OriginalNoisyMapLocal.pcd";
-    pcl::io::savePCDFileBinary(static_local_file_name, *map_local_curr);
+    pcl::io::savePCDFileASCII(static_local_file_name, *map_local_curr);
     ROS_INFO_STREAM("\033[1;32m The original pointcloud is saved (local coord): " << static_local_file_name
                                                                                   << "\033[0m");
   }
@@ -856,7 +892,13 @@ void Removerter::saveMapPointcloudByMergingCleanedScans(void) {
     pcl::PointCloud<PointType>::Ptr map_global_static_scans_merged_to_verify_full(new pcl::PointCloud<PointType>);
     pcl::PointCloud<PointType>::Ptr map_global_static_scans_merged_to_verify(new pcl::PointCloud<PointType>);
     mergeScansWithinGlobalCoord(scans_static_, scan_poses_, map_global_static_scans_merged_to_verify_full);
-    octreeDownsampling(map_global_static_scans_merged_to_verify_full, map_global_static_scans_merged_to_verify);
+    // octreeDownsampling(map_global_static_scans_merged_to_verify_full, map_global_static_scans_merged_to_verify);
+
+    // kumo 0.2 res
+    pcl::VoxelGrid<PointType> downsize_filter;
+    downsize_filter.setLeafSize(0.2, 0.2, 0.2);
+    downsize_filter.setInputCloud(map_global_static_scans_merged_to_verify_full);
+    downsize_filter.filter(*map_global_static_scans_merged_to_verify);
 
     // get labels
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -867,10 +909,8 @@ void Removerter::saveMapPointcloudByMergingCleanedScans(void) {
     kdtree.setInputCloud(map_global_static_scans_merged_to_verify_full);
 
     int K = 1;
-
     std::vector<int> pointIdxNKNSearch(K);
     std::vector<float> pointNKNSquaredDistance(K);
-
     // Set dst <- output
     for (const auto &pt : map_global_static_scans_merged_to_verify->points) {
       if (kdtree.nearestKSearch(pt, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0) {
@@ -880,12 +920,15 @@ void Removerter::saveMapPointcloudByMergingCleanedScans(void) {
       }
     }
     *map_global_static_scans_merged_to_verify = *cloud_tmp;
+    map_global_static_scans_merged_to_verify->height = 1;
+    map_global_static_scans_merged_to_verify->width = map_global_static_scans_merged_to_verify->size();
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // kumo111
     // global
     std::string local_file_name = map_static_save_dir_ + "/StaticMapScansideMapGlobal.pcd";
-    pcl::io::savePCDFileBinary(local_file_name, *map_global_static_scans_merged_to_verify);
+    ROS_WARN("saving static map.....");
+    pcl::io::savePCDFileASCII(local_file_name, *map_global_static_scans_merged_to_verify);
     ROS_INFO_STREAM(
         "\033[1;32m  [For verification] A static pointcloud "
         "(cleaned scans merged) is saved (global coord): "
@@ -897,7 +940,7 @@ void Removerter::saveMapPointcloudByMergingCleanedScans(void) {
     transformGlobalMapToLocal(map_global_static_scans_merged_to_verify, base_node_idx,
                               map_local_static_scans_merged_to_verify);
     std::string global_file_name = map_static_save_dir_ + "/StaticMapScansideMapLocal.pcd";
-    pcl::io::savePCDFileBinary(global_file_name, *map_local_static_scans_merged_to_verify);
+    pcl::io::savePCDFileASCII(global_file_name, *map_local_static_scans_merged_to_verify);
     ROS_INFO_STREAM(
         "\033[1;32m  [For verification] A static pointcloud "
         "(cleaned scans merged) is saved (local coord): "

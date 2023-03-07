@@ -23,6 +23,8 @@ RosParamServer::RosParamServer()
     nh.param<float>("removert/sequence_hfov", kHFOV, 360.0);
     kFOV = std::pair<float, float>(kVFOV, kHFOV);
 
+    nh.param<float>("removert/max_filter_z", max_filter_z_, 999.9);
+
     // resolution 
     nh.param<std::vector<float>>("removert/remove_resolution_list", remove_resolution_list_, std::vector<float>());
     nh.param<std::vector<float>>("removert/revert_resolution_list", revert_resolution_list_, std::vector<float>());

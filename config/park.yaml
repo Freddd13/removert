@@ -6,14 +6,14 @@ removert:
   # @ save option 
   saveMapPCD: true 
   saveCleanScansPCD: true
-  save_pcd_directory: "/mnt/d/dataset/dynamic_self/test/removert/" # replace to your path (please use an absolute path)
+  save_pcd_directory: "/mnt/d/dataset/dynamic_self/test/removert_park/" # replace to your path (please use an absolute path)
 
 
   # @ sequence info (replace to your paths) 
   #   please follow the KITTI odometry dataset's scan and pose formats (i.e., make them .bin and line-by-line corresponding se3 poses composed of 12 numbers)
-  sequence_scan_dir: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/test/corner/cloud/"
-  sequence_scan_dir2: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/test/surf/cloud/"
-  sequence_pose_path: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/test/poses.txt"
+  sequence_scan_dir: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/park/corner/cloud/"
+  sequence_scan_dir2: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/park/surf/cloud/"
+  sequence_pose_path: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/park/poses.txt"
 
 
   sequence_vfov: 32 # including upper and lower fovs, 
@@ -64,8 +64,8 @@ removert:
 
   # remove 0.5deg, 0.75deg, 1deg
   # revert 2 deg
-  remove_resolution_list: [2.0, 1.3,  1.0] # for Ouster OS1-64 of MulRan dataset  # 
-  revert_resolution_list: [0.5] # TODO
+  remove_resolution_list: [0.5, 0.45,  0.4] # for Ouster OS1-64 of MulRan dataset  # 
+  revert_resolution_list: [0.35] # TODO
   # revert_resolution_list: [1.0, 0.9, 0.8, 0.7] # TODO
 
   # 都是由精到粗
@@ -96,3 +96,6 @@ removert:
   # @ For visualization of range images (rviz -d removert_visualization.rviz)
   rimg_color_min: 0.0 # meter
   rimg_color_max: 20.0 # meter
+
+
+  max_z_filter: 3.5

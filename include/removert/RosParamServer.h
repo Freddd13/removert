@@ -81,6 +81,7 @@ public:
 
     float rimg_color_min_;
     float rimg_color_max_;
+    float max_filter_z_;
     std::pair<float, float> kRangeColorAxis; // meter
     std::pair<float, float> kRangeColorAxisForDiff; // meter 
 
