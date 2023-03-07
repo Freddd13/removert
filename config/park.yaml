@@ -62,17 +62,22 @@ removert:
   # remove_resolution_list: [2.5, 2.0, 1.5] # for HDL 64E of KITTI dataset 
 
 
-  # remove 0.5deg, 0.75deg, 1deg
-  # revert 2 deg
-  remove_resolution_list: [0.5, 0.45,  0.4] # for Ouster OS1-64 of MulRan dataset  # 
-  revert_resolution_list: [0.35] # TODO
-  # revert_resolution_list: [1.0, 0.9, 0.8, 0.7] # TODO
+  # remove 2.0 2.05 2.1, revert 2.15
+  # rm3rv1
+  # remove_resolution_list: [0.5, 0.488,  0.476] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [0.465] # TODO
 
-  # 都是由精到粗
-  # 1.4 1.1 -->0.7deg, 0.9deg,... 
-  # 1.0, --> 1.0 deg , 1.x deg
-  # 我们选择 1.4 1.1
-  # 0.5 // 2 deg 
+  # rm2 rv1
+  # remove_resolution_list: [0.5, 0.488] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [0.465] # TODO
+
+  # # rm3
+  # remove_resolution_list: [0.5, 0.488,  0.476] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [] # TODO
+
+  # # rm2
+  remove_resolution_list: [0.5, 0.488] # for Ouster OS1-64 of MulRan dataset  # 
+  revert_resolution_list: [] # TODO
 
   # @ Removert params 
   # about density 

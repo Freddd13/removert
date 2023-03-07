@@ -63,6 +63,7 @@ void Removerter::allocateMemory() {
 
   map_global_curr_static_.reset(new pcl::PointCloud<PointType>());
   map_global_curr_dynamic_.reset(new pcl::PointCloud<PointType>());
+  map_global_full_dynamic_.reset(new pcl::PointCloud<PointType>());
 
   map_subset_global_curr_.reset(new pcl::PointCloud<PointType>());
 
@@ -75,6 +76,7 @@ void Removerter::allocateMemory() {
   map_local_curr_->clear();
   map_global_curr_static_->clear();
   map_global_curr_dynamic_->clear();
+  map_global_full_dynamic_->clear();
   map_subset_global_curr_->clear();
 
 }  // allocateMemory
@@ -474,7 +476,17 @@ void Removerter::transformGlobalMapSubsetToLocal(int _base_scan_idx) {
 
 }  // transformGlobalMapSubsetToLocal
 
-void Removerter::transformGlobalMapToLocal(int _base_scan_idx) {
+void Removerter::transformGlobalMapToLocal(int _base_scan_idx, pcl::PointCloud<PointType>::Ptr cloud_to_process, bool what_the_fuck) {
+  Eigen::Matrix4d base_pose_inverse = scan_inverse_poses_.at(_base_scan_idx);
+
+  // global to local (global2local)
+  map_local_curr_->clear();
+  pcl::transformPointCloud(*cloud_to_process, *map_local_curr_, base_pose_inverse);
+  pcl::transformPointCloud(*map_local_curr_, *map_local_curr_, kSE3MatExtrinsicPoseBasetoLiDAR);
+
+}  // transformGlobalMapToLocal
+
+void Removerter::transformGlobalMapToLocalRevert(int _base_scan_idx) {
   Eigen::Matrix4d base_pose_inverse = scan_inverse_poses_.at(_base_scan_idx);
 
   // global to local (global2local)
@@ -483,6 +495,7 @@ void Removerter::transformGlobalMapToLocal(int _base_scan_idx) {
   pcl::transformPointCloud(*map_local_curr_, *map_local_curr_, kSE3MatExtrinsicPoseBasetoLiDAR);
 
 }  // transformGlobalMapToLocal
+
 
 void Removerter::transformGlobalMapToLocal(int _base_scan_idx, pcl::PointCloud<PointType>::Ptr &_map_local) {
   Eigen::Matrix4d base_pose_inverse = scan_inverse_poses_.at(_base_scan_idx);
@@ -520,11 +533,12 @@ void Removerter::parseMapPointcloudSubsetUsingPtIdx(std::vector<int> &_point_ind
   extractor.filter(*_ptcloud_to_save);
 }  // parseMapPointcloudSubsetUsingPtIdx
 
-void Removerter::parseStaticMapPointcloudUsingPtIdx(std::vector<int> &_point_indexes) {
+void Removerter::parseStaticMapPointcloudUsingPtIdx(std::vector<int> &_point_indexes,
+                                                    pcl::PointCloud<PointType>::Ptr cloud_to_process) {
   // extractor
   pcl::ExtractIndices<PointType> extractor;
   boost::shared_ptr<std::vector<int>> index_ptr = boost::make_shared<std::vector<int>>(_point_indexes);
-  extractor.setInputCloud(map_global_curr_);
+  extractor.setInputCloud(cloud_to_process);
   extractor.setIndices(index_ptr);
   extractor.setNegative(false);  // If set to true, you can extract point clouds
                                  // outside the specified index
@@ -534,11 +548,12 @@ void Removerter::parseStaticMapPointcloudUsingPtIdx(std::vector<int> &_point_ind
   extractor.filter(*map_global_curr_static_);
 }  // parseStaticMapPointcloudUsingPtIdx
 
-void Removerter::parseDynamicMapPointcloudUsingPtIdx(std::vector<int> &_point_indexes) {
+void Removerter::parseDynamicMapPointcloudUsingPtIdx(std::vector<int> &_point_indexes,
+                                                     pcl::PointCloud<PointType>::Ptr cloud_to_process) {
   // extractor
   pcl::ExtractIndices<PointType> extractor;
   boost::shared_ptr<std::vector<int>> index_ptr = boost::make_shared<std::vector<int>>(_point_indexes);
-  extractor.setInputCloud(map_global_curr_);
+  extractor.setInputCloud(cloud_to_process);
   extractor.setIndices(index_ptr);
   extractor.setNegative(false);  // If set to true, you can extract point clouds
                                  // outside the specified index
@@ -546,6 +561,7 @@ void Removerter::parseDynamicMapPointcloudUsingPtIdx(std::vector<int> &_point_in
   // parse
   map_global_curr_dynamic_->clear();
   extractor.filter(*map_global_curr_dynamic_);
+  // *map_global_full_dynamic_ += *map_global_curr_dynamic_;
 }  // parseDynamicMapPointcloudUsingPtIdx
 
 void Removerter::saveCurrentStaticAndDynamicPointCloudGlobal(void) {
@@ -618,6 +634,40 @@ std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdx(const cv::Ma
   return dynamic_point_indexes;
 }  // calcDescrepancyAndParseDynamicPointIdx
 
+std::vector<int> Removerter::calcDiffRevertAndGetStaticIdx(const cv::Mat &_scan_rimg,
+                                                                    const cv::Mat &_diff_rimg,
+                                                                    const cv::Mat &_map_rimg_ptidx) {
+  int num_dyna_points{0};  // TODO: tracking the number of dynamic-assigned
+                           // points and decide when to stop removing (currently
+                           // just fixed iteration e.g., [2.5, 2.0, 1.5])
+
+  std::vector<int> static_point_indexes;
+  for (int row_idx = 0; row_idx < _diff_rimg.rows; row_idx++) {
+    for (int col_idx = 0; col_idx < _diff_rimg.cols; col_idx++) {
+      float this_diff = _diff_rimg.at<float>(row_idx, col_idx);
+      float this_range = _scan_rimg.at<float>(row_idx, col_idx);
+
+      float adaptive_coeff = 0.05;  // meter, // i.e., if 4m apart point, it should be 0.4m be diff
+                                    // (nearer) wrt the query
+      float adaptive_dynamic_descrepancy_threshold = adaptive_coeff * this_range;  // adaptive descrepancy threshold
+      // float adaptive_dynamic_descrepancy_threshold = 0.1;
+
+      if (this_diff < kValidDiffUpperBound  // exclude no-point pixels either on scan img
+                                            // or map img (100 is roughly 100 meter)
+          && this_diff < adaptive_dynamic_descrepancy_threshold /* dynamic */) {  // dynamic
+        int this_point_idx_in_global_map = _map_rimg_ptidx.at<int>(row_idx, col_idx);
+        static_point_indexes.emplace_back(this_point_idx_in_global_map);
+
+        // num_dyna_points++; // TODO
+      }
+    }
+  }
+
+  return static_point_indexes;
+}  // calcDescrepancyAndParseDynamicPointIdx
+
+
+
 void Removerter::takeGlobalMapSubsetWithinBall(int _center_scan_idx) {
   Eigen::Matrix4d center_pose_se3 = scan_poses_.at(_center_scan_idx);
   PointType center_pose;
@@ -631,7 +681,8 @@ void Removerter::takeGlobalMapSubsetWithinBall(int _center_scan_idx) {
   parseMapPointcloudSubsetUsingPtIdx(subset_indexes, map_subset_global_curr_);
 }  // takeMapSubsetWithinBall
 
-std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdxForEachScan(std::pair<int, int> _rimg_shape) {
+std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdxForEachScan(
+    std::pair<int, int> _rimg_shape, pcl::PointCloud<PointType>::Ptr cloud_to_process) {
   std::vector<int> dynamic_point_indexes;
   // dynamic_point_indexes.reserve(100000);
   for (std::size_t idx_scan = 0; idx_scan < scans_.size(); ++idx_scan) {
@@ -650,7 +701,7 @@ std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdxForEachScan(s
       // more fast.
       // - e.g., 100-1000m or ~5 million points are ok, empirically more than
       // 10Hz
-      transformGlobalMapToLocal(idx_scan);
+      transformGlobalMapToLocal(idx_scan, cloud_to_process, true);
     }
     auto [map_rimg, map_rimg_ptidx] =
         map2RangeImg(map_local_curr_, kFOV, _rimg_shape);  // the most time comsuming part 2
@@ -689,6 +740,70 @@ std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdxForEachScan(s
   return dynamic_point_indexes_unique;
 }  // calcDescrepancyForEachScan
 
+
+
+std::vector<int> Removerter::calcDescrepancyRevert(
+    std::pair<int, int> _rimg_shape, pcl::PointCloud<PointType>::Ptr cloud_to_process) {
+  std::vector<int> static_point_indexes;
+  // dynamic_point_indexes.reserve(100000);
+  for (std::size_t idx_scan = 0; idx_scan < scans_.size(); ++idx_scan) {
+    // curr scan
+    pcl::PointCloud<PointType>::Ptr _scan = scans_.at(idx_scan);
+
+    // scan's pointcloud to range img
+    cv::Mat scan_rimg = scan2RangeImg(_scan, kFOV, _rimg_shape);  // openMP inside
+
+    // map's pointcloud to range img
+    if (kUseSubsetMapCloud) {
+      takeGlobalMapSubsetWithinBall(idx_scan);
+      transformGlobalMapSubsetToLocal(idx_scan);  // the most time comsuming part 1
+    } else {
+      // if the input map size (of a batch) is short, just using this line is
+      // more fast.
+      // - e.g., 100-1000m or ~5 million points are ok, empirically more than
+      // 10Hz
+      transformGlobalMapToLocal(idx_scan, cloud_to_process, true);
+    }
+    auto [map_rimg, map_rimg_ptidx] =
+        map2RangeImg(map_local_curr_, kFOV, _rimg_shape);  // the most time comsuming part 2
+                                                           // -> so openMP applied inside
+
+    // diff range img
+    const int kNumRimgRow = _rimg_shape.first;
+    const int kNumRimgCol = _rimg_shape.second;
+    cv::Mat diff_rimg = cv::Mat(kNumRimgRow, kNumRimgCol, CV_32FC1,
+                                cv::Scalar::all(0.0));  // float matrix, save range value
+    cv::absdiff(scan_rimg, map_rimg, diff_rimg);
+
+    // parse dynamic points' indexes: rule: If a pixel value of diff_rimg is
+    // larger, scan is the further - means that pixel of submap is likely
+    // dynamic.
+    std::vector<int> this_scan_static_point_indexes =
+        calcDiffRevertAndGetStaticIdx(scan_rimg, diff_rimg, map_rimg_ptidx);
+    static_point_indexes.insert(static_point_indexes.end(), this_scan_static_point_indexes.begin(),
+                                this_scan_static_point_indexes.end());
+
+    // visualization
+    pubRangeImg(scan_rimg, scan_rimg_msg_, scan_rimg_msg_publisher_, kRangeColorAxis);
+    pubRangeImg(map_rimg, map_rimg_msg_, map_rimg_msg_publisher_, kRangeColorAxis);
+    pubRangeImg(diff_rimg, diff_rimg_msg_, diff_rimg_msg_publisher_, kRangeColorAxisForDiff);
+
+    std::pair<float, float> kRangeColorAxisForPtIdx{0.0, float(map_global_curr_->points.size())};
+    pubRangeImg(map_rimg_ptidx, map_rimg_ptidx_msg_, map_rimg_ptidx_msg_publisher_, kRangeColorAxisForPtIdx);
+
+    publishPointcloud2FromPCLptr(scan_publisher_, _scan);
+  }  // for_each scan Done
+
+  // remove repeated indexes
+  std::set<int> static_point_indexes_set(static_point_indexes.begin(), static_point_indexes.end());
+  std::vector<int> static_point_indexes_unique(static_point_indexes_set.begin(), static_point_indexes_set.end());
+
+  return static_point_indexes_unique;
+}  // calcDescrepancyForEachScan
+
+
+
+
 std::vector<int> Removerter::getStaticIdxFromDynamicIdx(const std::vector<int> &_dynamic_point_indexes,
                                                         int _num_all_points) {
   std::vector<int> pt_idx_all = linspace<int>(0, _num_all_points, _num_all_points);
@@ -702,8 +817,9 @@ std::vector<int> Removerter::getStaticIdxFromDynamicIdx(const std::vector<int> &
   return static_point_indexes;
 }  // getStaticIdxFromDynamicIdx
 
-std::vector<int> Removerter::getGlobalMapStaticIdxFromDynamicIdx(const std::vector<int> &_dynamic_point_indexes) {
-  int num_all_points = map_global_curr_->points.size();
+std::vector<int> Removerter::getGlobalMapStaticIdxFromDynamicIdx(const std::vector<int> &_dynamic_point_indexes,
+                                                                 pcl::PointCloud<PointType>::Ptr cloud_to_process) {
+  int num_all_points = cloud_to_process->points.size();
   return getStaticIdxFromDynamicIdx(_dynamic_point_indexes, num_all_points);
 }  // getGlobalMapStaticIdxFromDynamicIdx
 
@@ -733,26 +849,31 @@ void Removerter::removeOnce(float _res_alpha) {
 
   // map-side removal: remove and get dynamic (will be removed) points' index
   // set
-  std::vector<int> dynamic_point_indexes = calcDescrepancyAndParseDynamicPointIdxForEachScan(rimg_shape);
+  std::vector<int> dynamic_point_indexes =
+      calcDescrepancyAndParseDynamicPointIdxForEachScan(rimg_shape, map_global_curr_);
   ROS_INFO_STREAM("\033[1;32m -- The number of dynamic points: " << dynamic_point_indexes.size() << "\033[0m");
-  parseDynamicMapPointcloudUsingPtIdx(dynamic_point_indexes);
+  parseDynamicMapPointcloudUsingPtIdx(dynamic_point_indexes, map_global_curr_);
 
   // static_point_indexes == complemently indexing dynamic_point_indexes
-  std::vector<int> static_point_indexes = getGlobalMapStaticIdxFromDynamicIdx(dynamic_point_indexes);
+  std::vector<int> static_point_indexes = getGlobalMapStaticIdxFromDynamicIdx(dynamic_point_indexes, map_global_curr_);
   ROS_INFO_STREAM("\033[1;32m -- The number of static points: " << static_point_indexes.size() << "\033[0m");
-  parseStaticMapPointcloudUsingPtIdx(static_point_indexes);
+  parseStaticMapPointcloudUsingPtIdx(static_point_indexes, map_global_curr_);
 
   // Update the current map and reset the tree
   map_global_curr_->clear();
   *map_global_curr_ = *map_global_curr_static_;
+  *map_global_full_dynamic_ += *map_global_curr_dynamic_;
 
   // if(kUseSubsetMapCloud) // NOT recommend to use for under 5 million points
   // map input
-  //     kdtree_map_global_curr_->setInputCloud(map_global_curr_);
 
+  //     kdtree_map_global_curr_->setInputCloud(map_global_curr_);
 }  // removeOnce
 
 void Removerter::revertOnce(float _res_alpha) {
+  ////////////////////////////////////////////////////////////////////////////////
+  ////////////////////这只是粗略的Revert1实现！！！！///////////////////////
+  ////////////////////////////////////////////////////////////////////////////////
   std::pair<int, int> rimg_shape = resetRimgSize(kFOV, _res_alpha);
   float deg_per_pixel = 1.0 / _res_alpha;
   ROS_INFO_STREAM("\033[1;32m Reverting starts with resolution: x" << _res_alpha << " (" << deg_per_pixel
@@ -761,7 +882,21 @@ void Removerter::revertOnce(float _res_alpha) {
                                                              << "].\033[0m");
   ROS_INFO_STREAM("\033[1;32m -- ... TODO ... \033[0m");
 
-  // TODO
+  std::vector<int> static_point_indexes = calcDescrepancyRevert(rimg_shape, map_global_full_dynamic_);
+  ROS_INFO_STREAM("\033[1;32m -- The number of static points: " << static_point_indexes.size() << "\033[0m");
+  parseStaticMapPointcloudUsingPtIdx(static_point_indexes, map_global_full_dynamic_);
+
+  // static_point_indexes == complemently indexing dynamic_point_indexes
+  // 这没改名字，其实是反的，用获取的静态点去找动态点索引，因为静态点是深度图筛选出来的，而动态点是大多数，有很多没投影。
+  std::vector<int> dynamic_point_indexs =
+      getGlobalMapStaticIdxFromDynamicIdx(static_point_indexes, map_global_full_dynamic_);
+  ROS_INFO_STREAM("\033[1;32m -- The number of dynamic points: " << dynamic_point_indexs.size() << "\033[0m");
+  parseDynamicMapPointcloudUsingPtIdx(dynamic_point_indexs, map_global_full_dynamic_);
+
+  // Update the current map and reset the tree
+  // map_global_curr_->clear();
+  *map_global_curr_ += *map_global_curr_static_;
+  *map_global_full_dynamic_ = *map_global_curr_dynamic_;
 
 }  // revertOnce
 
@@ -845,11 +980,11 @@ std::pair<pcl::PointCloud<PointType>::Ptr, pcl::PointCloud<PointType>::Ptr> Remo
   pcl::PointCloud<PointType>::Ptr scan_static_local = global2local(scan_static_global, _scan_idx);
   pcl::PointCloud<PointType>::Ptr scan_dynamic_local = global2local(scan_dynamic_global, _scan_idx);
 
-  ROS_INFO_STREAM("\033[1;32m The scan " << sequence_valid_scan_paths_.at(_scan_idx) << "\033[0m");
-  ROS_INFO_STREAM("\033[1;32m -- The number of static points in a scan: " << scan_static_local->points.size()
-                                                                          << "\033[0m");
-  ROS_INFO_STREAM("\033[1;32m -- The number of dynamic points in a scan: "
-                  << num_points_of_a_scan - scan_static_local->points.size() << "\033[0m");
+  // ROS_INFO_STREAM("\033[1;32m The scan " << sequence_valid_scan_paths_.at(_scan_idx) << "\033[0m");
+  // ROS_INFO_STREAM("\033[1;32m -- The number of static points in a scan: " << scan_static_local->points.size()
+  //                                                                         << "\033[0m");
+  // ROS_INFO_STREAM("\033[1;32m -- The number of dynamic points in a scan: "
+  //                 << num_points_of_a_scan - scan_static_local->points.size() << "\033[0m");
 
   publishPointcloud2FromPCLptr(static_curr_scan_publisher_, scan_static_local);
   publishPointcloud2FromPCLptr(dynamic_curr_scan_publisher_, scan_dynamic_local);
@@ -975,6 +1110,11 @@ void Removerter::saveMapPointcloudByMergingCleanedScans(void) {
         "(cleaned scans merged) is saved (local coord): "
         << global_file_name << "\033[0m");
   }
+
+
+  // debug
+  // std::string global_file_name = map_dynamic_save_dir_ + "/debug_.pcd";
+  // pcl::io::savePCDFileBinary(global_file_name, *map_global_full_dynamic_);
 }  // saveMapPointcloudByMergingCleanedScans
 
 void Removerter::scansideRemovalForEachScan(void) {
@@ -1013,8 +1153,8 @@ void Removerter::run(void) {
   saveCurrentStaticAndDynamicPointCloudGlobal();               // if you want to save within
                                                                // the global points uncomment
                                                                // this line
-  saveCurrentStaticAndDynamicPointCloudLocal(base_node_idx_);  // w.r.t specific node's coord. 0 means w.r.t the start
                                                                // node, as an Identity.
+  saveCurrentStaticAndDynamicPointCloudLocal(base_node_idx_);  // w.r.t specific node's coord. 0 means w.r.t the start
 
   // TODO
   // map-side reverts
