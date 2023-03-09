@@ -80,8 +80,8 @@ public:
 
     void run(void);
 
-    void removeOnce(float _res);
-    void revertOnce(float _res);
+    void removeOnce(float v_res, float h_res);
+    void revertOnce(float v_res, float h_res);
 
     void saveCurrentStaticMapHistory(void); // the 0th element is a noisy (original input) (actually not static) map.
     void saveCurrentDynamicMapHistory(void);

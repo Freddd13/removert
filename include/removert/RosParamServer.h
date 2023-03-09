@@ -59,6 +59,8 @@ public:
     std::vector<float> remove_resolution_list_;
     std::vector<float> revert_resolution_list_;
 
+    std::vector<float> hremove_resolution_list_;
+    std::vector<float> hrevert_resolution_list_;
     // 
     int kNumOmpCores;
 

@@ -6,14 +6,14 @@ removert:
   # @ save option 
   saveMapPCD: true 
   saveCleanScansPCD: true
-  save_pcd_directory: "/mnt/d/dataset/dynamic_self/test/removert_park/" # replace to your path (please use an absolute path)
+  save_pcd_directory: "/mnt/d/dataset/dynamic_self/test/removert_machi/" # replace to your path (please use an absolute path)
 
 
   # @ sequence info (replace to your paths) 
   #   please follow the KITTI odometry dataset's scan and pose formats (i.e., make them .bin and line-by-line corresponding se3 poses composed of 12 numbers)
-  sequence_scan_dir: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/park/corner/cloud/"
-  sequence_scan_dir2: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/park/surf/cloud/"
-  sequence_pose_path: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/park/poses.txt"
+  sequence_scan_dir: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/machi/corner/cloud/"
+  sequence_scan_dir2: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/machi/surf/cloud/"
+  sequence_pose_path: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/machi/poses.txt"
 
 
   sequence_vfov: 32 # including upper and lower fovs, 
@@ -43,7 +43,7 @@ removert:
   #   it means we parse scans every <keyframe_gap> or <keyframe_gap_meter> meter within the idx range [start_idx, end_idx] 
   #   but for a single batch, < 100 scans are recommended for the computation speed.
   start_idx: 0 # change this 
-  end_idx: 649 # change this
+  end_idx: 813 # change this
 
 
   # @ auto repeat
@@ -60,8 +60,11 @@ removert:
   #     - e.g., Ouster OS1-64 of MulRan dataset -> appx 45 deg / 64 ray ~ 0.7 deg per pixel -> the magnifier ratio = 1/0.7 = 1.4
   # - recommend to use the first reverting resolution's magnifier ratio should lied in 1.0 to 1.5
   # remove_resolution_list: [2.5, 2.0, 1.5] # for HDL 64E of KITTI dataset 
+  # 
+
 
   # ==================2deg*2deg=======================
+  # remove 2.0 2.05 2.1, revert 2.15
   # rm3rv1
   # remove_resolution_list: [0.5, 0.4688,  0.4375] # for Ouster OS1-64 of MulRan dataset  # 
   # revert_resolution_list: [0.40625] # TODO
@@ -78,6 +81,11 @@ removert:
   # remove_resolution_list: [0.5, 0.4688] # for Ouster OS1-64 of MulRan dataset  # 
   # revert_resolution_list: [] # TODO
 
+
+
+
+
+
   # ==================1deg*1deg=======================
   # remove_resolution_list: [1.0, 0.952,  0.909] 
   # revert_resolution_list: [0.87]
@@ -90,6 +98,7 @@ removert:
 
   # remove_resolution_list: [1.0, 0.952] 
   # revert_resolution_list: []      
+
 
 
 
@@ -109,11 +118,10 @@ removert:
   # hremove_resolution_list: [1.0, 0.952,  0.909] 
   # hrevert_resolution_list: []
 
-  remove_resolution_list: [0.5, 0.4688] # for Ouster OS1-64 of MulRan dataset  # 
-  revert_resolution_list: [] # TODO
-  hremove_resolution_list: [1.0, 0.952] 
-  hrevert_resolution_list: []    
-
+  # remove_resolution_list: [0.5, 0.4688] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [] # TODO
+  # hremove_resolution_list: [1.0, 0.952] 
+  # hrevert_resolution_list: []    
 
   # ==================0.5deg*2deg=======================
   # remove_resolution_list: [0.5, 0.4688,  0.4375] # for Ouster OS1-64 of MulRan dataset  # 
@@ -126,15 +134,16 @@ removert:
   # hremove_resolution_list: [2.0, 1.8] 
   # hrevert_resolution_list: [1.67]
 
-  # remove_resolution_list: [0.5, 0.4688,  0.4375] # for Ouster OS1-64 of MulRan dataset  # 
-  # revert_resolution_list: [] # TODO
-  # hremove_resolution_list: [[2.0, 1.8,  1.67] 
-  # hrevert_resolution_list: []
+  remove_resolution_list: [2.0, 1.8,  1.67] # for Ouster OS1-64 of MulRan dataset  # 
+  revert_resolution_list: [1.54] # TODO
+  hremove_resolution_list: [2.0, 1.8,  1.67] 
+  hrevert_resolution_list: [1.54]
 
   # remove_resolution_list: [0.5, 0.4688] # for Ouster OS1-64 of MulRan dataset  # 
   # revert_resolution_list: [] # TODO
   # hremove_resolution_list: [2.0, 1.8] 
   # hrevert_resolution_list: []  
+
 
 
 
@@ -163,5 +172,3 @@ removert:
 
 
   max_z_filter: 3.5
-
-  # 50 / 0.4 50 /0.45 50 /0.5 50/ 0.55

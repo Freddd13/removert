@@ -51,11 +51,11 @@ SphericalPoint cart2sph(const PointType & _cp)
 }
 
 
-std::pair<int, int> resetRimgSize(const std::pair<float, float> _fov, const float _resize_ratio)
+std::pair<int, int> resetRimgSize(const std::pair<float, float> _fov, const float _resize_ratio, const float h_resize_ratio)
 {
     // default is 1 deg x 1 deg 
-    float alpha_vfov = _resize_ratio;    
-    float alpha_hfov = _resize_ratio;    
+    float alpha_vfov = _resize_ratio;
+    float alpha_hfov = h_resize_ratio;
 
     float V_FOV = _fov.first;
     float H_FOV = _fov.second;

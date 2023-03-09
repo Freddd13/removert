@@ -62,32 +62,90 @@ removert:
   # remove_resolution_list: [2.5, 2.0, 1.5] # for HDL 64E of KITTI dataset 
   # 
 
+
+  # ==================2deg*2deg=======================
   # remove 2.0 2.05 2.1, revert 2.15
   # rm3rv1
-  # remove_resolution_list: [0.5, 0.488,  0.476] # for Ouster OS1-64 of MulRan dataset  # 
-  # revert_resolution_list: [0.465] # TODO
+  remove_resolution_list: [0.5, 0.4688,  0.4375] # for Ouster OS1-64 of MulRan dataset  # 
+  revert_resolution_list: [0.40625] # TODO
 
   # rm2 rv1
-  # remove_resolution_list: [0.5, 0.488] # for Ouster OS1-64 of MulRan dataset  # 
-  # revert_resolution_list: [0.465] # TODO
+  # remove_resolution_list: [0.5, 0.4688] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [0.4375] # TODO
 
   # # rm3
-  # remove_resolution_list: [0.5, 0.488,  0.476] # for Ouster OS1-64 of MulRan dataset  # 
+  # remove_resolution_list: [0.5, 0.4688,  0.4375] # for Ouster OS1-64 of MulRan dataset  # 
   # revert_resolution_list: [] # TODO
 
   # # rm2
-  remove_resolution_list: [0.5, 0.488] # for Ouster OS1-64 of MulRan dataset  # 
-  revert_resolution_list: [] # TODO
+  # remove_resolution_list: [0.5, 0.4688] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [] # TODO
 
 
 
 
 
-  # 都是由精到粗
-  # 1.4 1.1 -->0.7deg, 0.9deg,... 
-  # 1.0, --> 1.0 deg , 1.x deg
-  # 我们选择 1.4 1.1
-  # 0.5 // 2 deg 
+
+  # ==================1deg*1deg=======================
+  # remove_resolution_list: [1.0, 0.952,  0.909] 
+  # revert_resolution_list: [0.87]
+
+  # remove_resolution_list: [1.0, 0.952] 
+  # revert_resolution_list: [0.87]
+
+  # remove_resolution_list: [1.0, 0.952,  0.909] 
+  # revert_resolution_list: []
+
+  # remove_resolution_list: [1.0, 0.952] 
+  # revert_resolution_list: []      
+
+
+
+
+  # ==================1deg*2deg=======================
+  # remove_resolution_list: [0.5, 0.4688,  0.4375] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [0.40625] # TODO
+  # hremove_resolution_list: [1.0, 0.952,  0.909] 
+  # hrevert_resolution_list: [0.87]
+
+  # remove_resolution_list: [0.5, 0.4688] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [0.4375] # T
+  # hremove_resolution_list: [1.0, 0.952] 
+  # hrevert_resolution_list: [0.87]
+
+  # remove_resolution_list: [0.5, 0.4688,  0.4375] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [] # TODO
+  # hremove_resolution_list: [1.0, 0.952,  0.909] 
+  # hrevert_resolution_list: []
+
+  # remove_resolution_list: [0.5, 0.4688] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [] # TODO
+  # hremove_resolution_list: [1.0, 0.952] 
+  # hrevert_resolution_list: []    
+
+  # ==================0.5deg*2deg=======================
+  # remove_resolution_list: [0.5, 0.4688,  0.4375] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [0.40625] # TODO
+  # hremove_resolution_list: [2.0, 1.8,  1.67] 
+  # hrevert_resolution_list: [1.54]
+
+  # remove_resolution_list: [0.5, 0.4688] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [0.4375] # T
+  # hremove_resolution_list: [2.0, 1.8] 
+  # hrevert_resolution_list: [1.67]
+
+  # remove_resolution_list: [0.5, 0.4688,  0.4375] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [] # TODO
+  # hremove_resolution_list: [2.0, 1.8,  1.67] 
+  # hrevert_resolution_list: []
+
+  # remove_resolution_list: [0.5, 0.4688] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [] # TODO
+  # hremove_resolution_list: [2.0, 1.8] 
+  # hrevert_resolution_list: []  
+
+
+
 
   # @ Removert params 
   # about density 

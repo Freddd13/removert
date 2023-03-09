@@ -105,7 +105,8 @@ std::vector<double> splitPoseLine(std::string _str_line, char _delimiter);
 
 SphericalPoint cart2sph(const PointType & _cp);
 
-std::pair<int, int> resetRimgSize(const std::pair<float, float> _fov, const float _resize_ratio);
+std::pair<int, int> resetRimgSize(const std::pair<float, float> _fov, const float _resize_ratio,
+                                  const float h_resize_ratio);
 
 template<typename T>
 cv::Mat convertColorMappedImg (const cv::Mat &_src, std::pair<T, T> _caxis)

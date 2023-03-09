@@ -28,6 +28,8 @@ RosParamServer::RosParamServer()
     // resolution 
     nh.param<std::vector<float>>("removert/remove_resolution_list", remove_resolution_list_, std::vector<float>());
     nh.param<std::vector<float>>("removert/revert_resolution_list", revert_resolution_list_, std::vector<float>());
+    nh.param<std::vector<float>>("removert/hremove_resolution_list", hremove_resolution_list_, std::vector<float>());
+    nh.param<std::vector<float>>("removert/hrevert_resolution_list", hrevert_resolution_list_, std::vector<float>());
 
     // sequcne system info 
     nh.param<std::vector<double>>("removert/ExtrinsicLiDARtoPoseBase", kVecExtrinsicLiDARtoPoseBase, std::vector<double>());

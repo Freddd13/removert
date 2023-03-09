@@ -744,7 +744,7 @@ std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdxForEachScan(
 
 std::vector<int> Removerter::calcDescrepancyRevert(
     std::pair<int, int> _rimg_shape, pcl::PointCloud<PointType>::Ptr cloud_to_process) {
-  std::vector<int> static_point_indexes;
+  std::vector<int> static_point_indexes, dynamic_point_indexes;
   // dynamic_point_indexes.reserve(100000);
   for (std::size_t idx_scan = 0; idx_scan < scans_.size(); ++idx_scan) {
     // curr scan
@@ -783,6 +783,12 @@ std::vector<int> Removerter::calcDescrepancyRevert(
     static_point_indexes.insert(static_point_indexes.end(), this_scan_static_point_indexes.begin(),
                                 this_scan_static_point_indexes.end());
 
+    std::vector<int> this_scan_dynamic_point_indexes =
+        calcDescrepancyAndParseDynamicPointIdx(scan_rimg, diff_rimg, map_rimg_ptidx);
+    dynamic_point_indexes.insert(dynamic_point_indexes.end(), this_scan_dynamic_point_indexes.begin(),
+                                 this_scan_dynamic_point_indexes.end());
+    // 这次没出不代表     
+
     // visualization
     pubRangeImg(scan_rimg, scan_rimg_msg_, scan_rimg_msg_publisher_, kRangeColorAxis);
     pubRangeImg(map_rimg, map_rimg_msg_, map_rimg_msg_publisher_, kRangeColorAxis);
@@ -798,7 +804,25 @@ std::vector<int> Removerter::calcDescrepancyRevert(
   std::set<int> static_point_indexes_set(static_point_indexes.begin(), static_point_indexes.end());
   std::vector<int> static_point_indexes_unique(static_point_indexes_set.begin(), static_point_indexes_set.end());
 
-  return static_point_indexes_unique;
+  std::set<int> dynamic_point_indexes_set(dynamic_point_indexes.begin(), dynamic_point_indexes.end());
+  std::vector<int> dynamic_point_indexes_unique(dynamic_point_indexes_set.begin(), dynamic_point_indexes_set.end());
+
+  // 只要被识别成过动态，就不是静态点！
+  std::sort(static_point_indexes_unique.begin(), static_point_indexes_unique.end());
+  std::sort(dynamic_point_indexes_unique.begin(), dynamic_point_indexes_unique.end());
+
+  std::vector<int> revert_indices(static_point_indexes_unique.size());
+  auto it = std::set_difference(static_point_indexes_unique.begin(), static_point_indexes_unique.end(),
+                                dynamic_point_indexes_unique.begin(), dynamic_point_indexes_unique.end(),
+                                revert_indices.begin());
+
+  revert_indices.resize(it - revert_indices.begin());
+  static_point_indexes_unique.erase(
+      std::remove_if(
+          static_point_indexes_unique.begin(), static_point_indexes_unique.end(),
+          [&revert_indices](int x) { return std::binary_search(revert_indices.begin(), revert_indices.end(), x); }),
+      static_point_indexes_unique.end());
+  return revert_indices;
 }  // calcDescrepancyForEachScan
 
 
@@ -832,14 +856,14 @@ void Removerter::saveCurrentStaticMapHistory(void) {
   static_map_global_history_.emplace_back(map_global_curr_static);
 }  // saveCurrentStaticMapHistory
 
-void Removerter::removeOnce(float _res_alpha) {
+void Removerter::removeOnce(float v_res, float h_res) {
   // filter spec (i.e., a shape of the range image)
-  curr_res_alpha_ = _res_alpha;  //
+  curr_res_alpha_ = v_res;  //
 
-  std::pair<int, int> rimg_shape = resetRimgSize(kFOV, _res_alpha);
+  std::pair<int, int> rimg_shape = resetRimgSize(kFOV, v_res, h_res);
   // 比如我设fov为30，则 image v_size = 30 * 1/res = 30 * 1/1 = 每个像素1 度分辨率
-  float deg_per_pixel = 1.0 / _res_alpha;  // res: pixel/deg img_size: pixel*deg/pixel = deg
-  ROS_INFO_STREAM("\033[1;32m Removing starts with resolution: x" << _res_alpha << " (" << deg_per_pixel
+  float deg_per_pixel = 1.0 / v_res;  // res: pixel/deg img_size: pixel*deg/pixel = deg
+  ROS_INFO_STREAM("\033[1;32m Removing starts with resolution: x" << v_res << " (" << deg_per_pixel
                                                                   << " deg/pixel)\033[0m");
   ROS_INFO_STREAM("\033[1;32m -- The range image size is: [" << rimg_shape.first << ", " << rimg_shape.second
                                                              << "].\033[0m");
@@ -870,13 +894,13 @@ void Removerter::removeOnce(float _res_alpha) {
   //     kdtree_map_global_curr_->setInputCloud(map_global_curr_);
 }  // removeOnce
 
-void Removerter::revertOnce(float _res_alpha) {
+void Removerter::revertOnce(float v_res, float h_res) {
   ////////////////////////////////////////////////////////////////////////////////
   ////////////////////这只是粗略的Revert1实现！！！！///////////////////////
   ////////////////////////////////////////////////////////////////////////////////
-  std::pair<int, int> rimg_shape = resetRimgSize(kFOV, _res_alpha);
-  float deg_per_pixel = 1.0 / _res_alpha;
-  ROS_INFO_STREAM("\033[1;32m Reverting starts with resolution: x" << _res_alpha << " (" << deg_per_pixel
+  std::pair<int, int> rimg_shape = resetRimgSize(kFOV, v_res, h_res);
+  float deg_per_pixel = 1.0 / v_res;
+  ROS_INFO_STREAM("\033[1;32m Reverting starts with resolution: x" << v_res << " (" << deg_per_pixel
                                                                    << " deg/pixel)\033[0m");
   ROS_INFO_STREAM("\033[1;32m -- The range image size is: [" << rimg_shape.first << ", " << rimg_shape.second
                                                              << "].\033[0m");
@@ -1144,9 +1168,13 @@ void Removerter::run(void) {
   makeGlobalMap();
 
   // map-side removals
-  for (float _rm_res : remove_resolution_list_) {
-    removeOnce(_rm_res);
+  for (int i = 0; i < remove_resolution_list_.size(); i++){
+    if (hremove_resolution_list_.empty()) {
+      hremove_resolution_list_ = remove_resolution_list_;
+    }
+    removeOnce(remove_resolution_list_[i], hremove_resolution_list_[i]);
   }
+
 
   // if you want to every iteration's map data, place below two lines to inside
   // of the above for loop
@@ -1159,10 +1187,15 @@ void Removerter::run(void) {
   // TODO
   // map-side reverts
   // if you want to remove as much as possible, you can use omit this steps
-  for (float _rv_res : revert_resolution_list_) {
-    revertOnce(_rv_res);
+  for (int i = 0; i < revert_resolution_list_.size(); i++) {
+    if (hrevert_resolution_list_.empty()) {
+      hrevert_resolution_list_ = revert_resolution_list_;
+    }
+    revertOnce(revert_resolution_list_[i], hrevert_resolution_list_[i]);
   }
 
   // scan-side removals
   scansideRemovalForEachScanAndSaveThem();
 }
+
+// 32 / 2 = 16 32 / ? = 15 
