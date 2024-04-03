@@ -6,15 +6,14 @@ removert:
   # @ save option 
   saveMapPCD: true 
   saveCleanScansPCD: true
-  save_pcd_directory: "/mnt/d/dataset/dynamic_self/test/removert_park/" # replace to your path (please use an absolute path)
+  save_pcd_directory: "/mnt/d/dissertation/online_dor_results/park/results" # replace to your path (please use an absolute path)
 
 
   # @ sequence info (replace to your paths) 
   #   please follow the KITTI odometry dataset's scan and pose formats (i.e., make them .bin and line-by-line corresponding se3 poses composed of 12 numbers)
-  sequence_scan_dir: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/park/corner/cloud/"
-  sequence_scan_dir2: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/park/surf/cloud/"
-  sequence_pose_path: "/mnt/d/dataset/dynamic_self/test/cloud_for_removert/park/poses.txt"
-
+  sequence_scan_dir: "/mnt/d/dissertation/online_dor_results/park/rmvt/rmvt_input_cloud/corner"
+  sequence_scan_dir2: "/mnt/d/dissertation/online_dor_results/park/rmvt/rmvt_input_cloud/surf"
+  sequence_pose_path: "/mnt/d/dissertation/online_dor_results/park/rmvt/poses.txt"
 
   sequence_vfov: 32 # including upper and lower fovs, 
                     # for example, KITTI's HDL64E is 2 + 24.9 ~ 27 deg. (so 25 + 25 = 50 is recommended because it is enough)
@@ -71,8 +70,8 @@ removert:
   # revert_resolution_list: [0.4375] # TODO
 
   # # rm3
-  # remove_resolution_list: [0.5, 0.4688,  0.4375] # for Ouster OS1-64 of MulRan dataset  # 
-  # revert_resolution_list: [] # TODO
+  remove_resolution_list: [0.5, 0.4688,  0.4375] # for Ouster OS1-64 of MulRan dataset  # 
+  revert_resolution_list: [] # TODO
 
   # # rm2
   # remove_resolution_list: [0.5, 0.4688] # for Ouster OS1-64 of MulRan dataset  # 
@@ -109,10 +108,10 @@ removert:
   # hremove_resolution_list: [1.0, 0.952,  0.909] 
   # hrevert_resolution_list: []
 
-  remove_resolution_list: [0.5, 0.4688] # for Ouster OS1-64 of MulRan dataset  # 
-  revert_resolution_list: [] # TODO
-  hremove_resolution_list: [1.0, 0.952] 
-  hrevert_resolution_list: []    
+  # remove_resolution_list: [0.5, 0.4688] # for Ouster OS1-64 of MulRan dataset  # 
+  # revert_resolution_list: [] # TODO
+  # hremove_resolution_list: [1.0, 0.952] 
+  # hrevert_resolution_list: []    
 
 
   # ==================0.5deg*2deg=======================

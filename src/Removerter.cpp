@@ -313,7 +313,7 @@ cv::Mat Removerter::scan2RangeImg(
     int upper_bound_col_idx{kNumRimgCol - 1};
 
     // 32/2 = 16
-    // 32 / 1 = 32
+    // 32 / 1 = 32 
     // 32 / 
     // row_num (32*1/res)
     // res == 2:
@@ -908,12 +908,12 @@ void Removerter::revertOnce(float v_res, float h_res) {
 
   std::vector<int> static_point_indexes = calcDescrepancyRevert(rimg_shape, map_global_full_dynamic_);
   ROS_INFO_STREAM("\033[1;32m -- The number of static points: " << static_point_indexes.size() << "\033[0m");
-  parseStaticMapPointcloudUsingPtIdx(static_point_indexes, map_global_full_dynamic_);
+  parseStaticMapPointcloudUsingPtIdx(static_point_indexes, map_global_full_dynamic_); // revert cloud --> global static cloud
 
   // static_point_indexes == complemently indexing dynamic_point_indexes
   // 这没改名字，其实是反的，用获取的静态点去找动态点索引，因为静态点是深度图筛选出来的，而动态点是大多数，有很多没投影。
-  std::vector<int> dynamic_point_indexs =
-      getGlobalMapStaticIdxFromDynamicIdx(static_point_indexes, map_global_full_dynamic_);
+  std::vector<int> dynamic_point_indexs = //real dynamic
+      getGlobalMapStaticIdxFromDynamicIdx(static_point_indexes, map_global_full_dynamic_);  // 从global dynamic中删除static indices点
   ROS_INFO_STREAM("\033[1;32m -- The number of dynamic points: " << dynamic_point_indexs.size() << "\033[0m");
   parseDynamicMapPointcloudUsingPtIdx(dynamic_point_indexs, map_global_full_dynamic_);
 

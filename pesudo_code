@@ -1,0 +1,61 @@
+if q.size() < N_{fuse}:
+    q.push((P,T))
+    return P
+
+N_start = N_interval
+N_end = N_interval + N_fuse
+
+// 投影TODO点云
+for p in P:
+    if p is not GROUND:
+        row, col = GetRowCol(p, res_h, res_v)  // 不换行的单行注释
+        pixel_container <- PixelCollect(p, row, col) // 收集点
+        if depth_img_todo(row, col) is empty or range2d(p) < depth_img_todo(row,col):
+            depth_img_todo (row, col) = range2d(p)
+            label_img_todo(row, col) = p.label
+        end if
+    end if
+
+// 获取参考点云
+for P_fuse, T_fuse in q[-N_end:-N_start]:
+    P_{refer} <- TransformPointCloud(P_fuse, T_fuse)
+P_{refer} <- TransformPointCloud(P_{submap}, T_{submap})
+
+
+// 投影参考点云
+for p in P_{refer}:
+    row, col = GetRowCol(p, res_h, res_v)
+    if IsDynamicPoint(p):
+        if depth_img_backup(row, col) is empty or range2d(p) < depth_img_backup(row,col):
+            depth_img_backup (row, col) = range2d(p)
+        end if
+        continue
+    end if
+    UpdateFallinData(p, label_img_todo(row, col))
+if depth_img_refer(row, col) is empty or range2d_p < img(row,col):
+    depth_img_refer(row, col) = range2d(p)
+end if
+
+
+// 对比深度图
+depth_img_diff = depth_img_refer - depth_img_todo
+for pixel in depth_img_diff, :
+    for diff_value, range2d(p_todo) in diff_img: 
+        p = GetPoint(pixel, depth_img_todo)
+        if diff_value > f(p) // equ x.x.x:
+            if GroundRevert(p, pixel_container):
+                continue
+            if CheckingNeighborRevert(p, pixel_container):
+                continue
+            MarkDynamic(p, pixel_container)
+
+// 聚类处理            
+for cluster in clusters:
+    ProtectOrExpandClusters(cluster, pixel_container)
+
+
+// 更新队列的积累点云和位姿
+P = MarkPoints(P, pixel_container)   // 综合前面得到最终的动态点索引并
+q.push((P, T))
+q.pop()
+return P
